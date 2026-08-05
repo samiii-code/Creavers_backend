@@ -1,6 +1,7 @@
 using System.Text;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -9,10 +10,11 @@ using Creavers.API.Configurations;
 using Creavers.API.Data;
 using Creavers.API.Interfaces;
 using Creavers.API.Middlewares;
+using Creavers.API.Models;
 using Creavers.API.Repositories;
 using Creavers.API.Services;
 
-// 1. Configure Serilog Bootstrap Logger
+// ─── 1. Bootstrap Serilog ────────────────────────────────────────────────────
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateBootstrapLogger();
@@ -23,33 +25,43 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // 2. Add Serilog to Host
+    // ─── 2. Serilog Host ─────────────────────────────────────────────────────
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext());
 
-    // 3. Bind Configurations
+    // ─── 3. Bind Configuration ───────────────────────────────────────────────
     var jwtSettings = new JwtSettings();
     builder.Configuration.GetSection(JwtSettings.SectionName).Bind(jwtSettings);
     builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 
-    // 4. Configure PostgreSQL EF Core DbContext
+    // ─── 4. PostgreSQL / EF Core ─────────────────────────────────────────────
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseNpgsql(connectionString));
 
-    // 5. Register AutoMapper
-    builder.Services.AddAutoMapper(typeof(Program).Assembly);
+    // ─── 5. ASP.NET Identity ─────────────────────────────────────────────────
+    builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
+    {
+        // Password policy
+        options.Password.RequireDigit = true;
+        options.Password.RequiredLength = 8;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireNonAlphanumeric = true;
 
-    // 6. Register FluentValidation
-    builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
+        // User settings
+        options.User.RequireUniqueEmail = true;
+    })
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
 
-    // 7. Register JWT Authentication (Configuration Only)
+    // ─── 6. JWT Authentication ───────────────────────────────────────────────
     builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
     })
     .AddJwtBearer(options =>
     {
@@ -58,40 +70,46 @@ try
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
-            ValidateIssuer = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidateAudience = true,
-            ValidAudience = jwtSettings.Audience,
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
+            ValidateIssuer           = true,
+            ValidIssuer              = jwtSettings.Issuer,
+            ValidateAudience         = true,
+            ValidAudience            = jwtSettings.Audience,
+            ValidateLifetime         = true,
+            ClockSkew                = TimeSpan.Zero
         };
     });
 
     builder.Services.AddAuthorization();
 
-    // 8. Register Controllers (Using Controllers - No Minimal APIs)
+    // ─── 7. AutoMapper ───────────────────────────────────────────────────────
+    builder.Services.AddAutoMapper(typeof(Program).Assembly);
+
+    // ─── 8. FluentValidation ─────────────────────────────────────────────────
+    builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
+
+    // ─── 9. Controllers ──────────────────────────────────────────────────────
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
 
-    // 9. Configure Swagger / OpenAPI with JWT Authorization Bearer Scheme
+    // ─── 10. Swagger / OpenAPI ───────────────────────────────────────────────
     builder.Services.AddSwaggerGen(c =>
     {
         c.SwaggerDoc("v1", new OpenApiInfo
         {
-            Title = "Creavers Local Services Marketplace API",
-            Version = "v1",
-            Description = "ASP.NET Core 8 Web API Foundation for Creavers Local Services Marketplace"
+            Title       = "Creavers Local Services Marketplace API",
+            Version     = "v1",
+            Description = "ASP.NET Core 8 Web API – Week 2: Auth, Categories, Provider Profiles, Admin Approval"
         });
 
         c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
-            Name = "Authorization",
-            Type = SecuritySchemeType.ApiKey,
-            Scheme = "Bearer",
+            Name        = "Authorization",
+            Type        = SecuritySchemeType.ApiKey,
+            Scheme      = "Bearer",
             BearerFormat = "JWT",
-            In = ParameterLocation.Header,
-            Description = "Enter 'Bearer' [space] and then your valid JWT token.\r\n\r\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\""
+            In          = ParameterLocation.Header,
+            Description = "Enter 'Bearer' [space] and then your valid JWT token.\r\n\r\nExample: \"Bearer eyJhbGci...\""
         });
 
         c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -102,7 +120,7 @@ try
                     Reference = new OpenApiReference
                     {
                         Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
+                        Id   = "Bearer"
                     }
                 },
                 Array.Empty<string>()
@@ -110,12 +128,14 @@ try
         });
     });
 
-    // 10. Configure CORS Policy
+    // ─── 11. CORS ────────────────────────────────────────────────────────────
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("AllowConfiguredOrigins", policy =>
         {
-            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+            var allowedOrigins = builder.Configuration
+                .GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
             if (allowedOrigins.Length > 0)
             {
                 policy.WithOrigins(allowedOrigins)
@@ -125,22 +145,45 @@ try
             }
             else
             {
-                policy.AllowAnyOrigin()
-                      .AllowAnyHeader()
-                      .AllowAnyMethod();
+                policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
             }
         });
     });
 
-    // 11. Register Dependency Injection (Repositories & Services)
+    // ─── 12. Dependency Injection ────────────────────────────────────────────
+    // Generic repository
     builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-    builder.Services.AddScoped<IHealthService, HealthService>();
 
+    // Domain services
+    builder.Services.AddScoped<IHealthService,   HealthService>();
+    builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+    builder.Services.AddScoped<IAuthService,     AuthService>();
+    builder.Services.AddScoped<IUserService,     UserService>();
+    builder.Services.AddScoped<ICategoryService, CategoryService>();
+    builder.Services.AddScoped<IProviderService, ProviderService>();
+    builder.Services.AddScoped<IAdminService,    AdminService>();
+
+    // ─── Build ────────────────────────────────────────────────────────────────
     var app = builder.Build();
 
-    // 12. Middleware Pipeline Execution
-    app.UseMiddleware<GlobalExceptionMiddleware>();
+    // ─── 13. Seed Roles & Default Admin ──────────────────────────────────────
+    using (var scope = app.Services.CreateScope())
+    {
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+        string[] roles  = { "ADMIN", "PROVIDER", "CUSTOMER" };
 
+        foreach (var role in roles)
+        {
+            if (!await roleManager.RoleExistsAsync(role))
+            {
+                await roleManager.CreateAsync(new IdentityRole<Guid>(role));
+                Log.Information("Role seeded: {Role}", role);
+            }
+        }
+    }
+
+    // ─── 14. Middleware Pipeline ──────────────────────────────────────────────
+    app.UseMiddleware<GlobalExceptionMiddleware>();
     app.UseSerilogRequestLogging();
 
     if (app.Environment.IsDevelopment())
@@ -154,12 +197,9 @@ try
     }
 
     app.UseHttpsRedirection();
-
     app.UseCors("AllowConfiguredOrigins");
-
     app.UseAuthentication();
     app.UseAuthorization();
-
     app.MapControllers();
 
     Log.Information("Creavers API application starting host...");
