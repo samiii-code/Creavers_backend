@@ -194,11 +194,13 @@ try
         app.UseSwaggerUI(c =>
         {
             c.SwaggerEndpoint("/swagger/v1/swagger.json", "Creavers API v1");
-            c.RoutePrefix = "swagger";
+            c.RoutePrefix = string.Empty; // Serve Swagger UI at root (http://localhost:port/)
         });
     }
-
-    app.UseHttpsRedirection();
+    else
+    {
+        app.UseHttpsRedirection();
+    }
     app.UseCors("AllowConfiguredOrigins");
     app.UseAuthentication();
     app.UseAuthorization();
