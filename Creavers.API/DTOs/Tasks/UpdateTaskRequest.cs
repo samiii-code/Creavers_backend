@@ -28,12 +28,6 @@ namespace Creavers.API.DTOs.Tasks
         /// <example>Near Edna Mall</example>
         public string? Landmark      { get; set; }
 
-        /// <example>8.9956</example>
-        public double? Latitude      { get; set; }
-
-        /// <example>38.7636</example>
-        public double? Longitude     { get; set; }
-
         // ── Task details ──────────────────────────────────────────────────────
 
         /// <example>650.00</example>

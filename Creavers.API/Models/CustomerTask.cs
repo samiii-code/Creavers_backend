@@ -15,7 +15,6 @@ namespace Creavers.API.Models
         public string             SubCity       { get; set; } = string.Empty;   // e.g. Bole, Yeka
         public string             Woreda        { get; set; } = string.Empty;
         public string?            Landmark      { get; set; }
-       
 
         // ── Task details ────────────────────────────────────────────────────────
         public decimal            Budget        { get; set; }

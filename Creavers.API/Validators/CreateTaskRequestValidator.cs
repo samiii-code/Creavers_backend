@@ -39,14 +39,6 @@ namespace Creavers.API.Validators
 
             RuleFor(x => x.PreferredDate)
                 .GreaterThan(DateTime.UtcNow).WithMessage("PreferredDate must be in the future.");
-
-            RuleFor(x => x.Latitude)
-                .InclusiveBetween(-90.0, 90.0).WithMessage("Latitude must be between -90 and 90.")
-                .When(x => x.Latitude.HasValue);
-
-            RuleFor(x => x.Longitude)
-                .InclusiveBetween(-180.0, 180.0).WithMessage("Longitude must be between -180 and 180.")
-                .When(x => x.Longitude.HasValue);
         }
     }
 }

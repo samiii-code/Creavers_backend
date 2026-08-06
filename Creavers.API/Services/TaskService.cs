@@ -94,8 +94,6 @@ namespace Creavers.API.Services
             if (request.SubCity       != null) task.SubCity       = request.SubCity;
             if (request.Woreda        != null) task.Woreda        = request.Woreda;
             if (request.Landmark      != null) task.Landmark      = request.Landmark;
-            if (request.Latitude      != null) task.Latitude      = request.Latitude;
-            if (request.Longitude     != null) task.Longitude     = request.Longitude;
             if (request.Budget        != null) task.Budget        = request.Budget.Value;
             if (request.PreferredDate != null) task.PreferredDate = request.PreferredDate.Value;
             if (request.Status        != null) task.Status        = request.Status.Value;

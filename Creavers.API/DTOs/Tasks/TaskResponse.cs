@@ -16,8 +16,6 @@ namespace Creavers.API.DTOs.Tasks
         public string            SubCity      { get; set; } = string.Empty;
         public string            Woreda       { get; set; } = string.Empty;
         public string?           Landmark     { get; set; }
-        public double?           Latitude     { get; set; }
-        public double?           Longitude    { get; set; }
         public decimal           Budget       { get; set; }
         public DateTime          PreferredDate { get; set; }
         public CustomerTaskStatus Status      { get; set; }
