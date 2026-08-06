@@ -188,19 +188,15 @@ try
     app.UseMiddleware<GlobalExceptionMiddleware>();
     app.UseSerilogRequestLogging();
 
-    if (app.Environment.IsDevelopment())
+    // Swagger UI is served at the root (http://localhost:5000/) in all environments
+    // so the API is browsable regardless of how it is launched.
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
     {
-        app.UseSwagger();
-        app.UseSwaggerUI(c =>
-        {
-            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Creavers API v1");
-            c.RoutePrefix = string.Empty; // Serve Swagger UI at root (http://localhost:port/)
-        });
-    }
-    else
-    {
-        app.UseHttpsRedirection();
-    }
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Creavers API v1");
+        c.RoutePrefix = string.Empty; // Serve Swagger UI at root (http://localhost:5000/)
+    });
+
     app.UseCors("AllowConfiguredOrigins");
     app.UseAuthentication();
     app.UseAuthorization();
