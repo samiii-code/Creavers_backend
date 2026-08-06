@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Creavers.API.DTOs;
+using Creavers.API.DTOs.Bookings;
 using Creavers.API.DTOs.Providers;
 using Creavers.API.Interfaces;
 
@@ -16,17 +17,20 @@ namespace Creavers.API.Controllers
     public class ProvidersController : ControllerBase
     {
         private readonly IProviderService _providerService;
+        private readonly IBookingService  _bookingService;
         private readonly IValidator<CreateProviderProfileRequest> _createValidator;
         private readonly IValidator<UpdateProviderProfileRequest> _updateValidator;
 
         public ProvidersController(
             IProviderService providerService,
+            IBookingService  bookingService,
             IValidator<CreateProviderProfileRequest> createValidator,
             IValidator<UpdateProviderProfileRequest> updateValidator)
         {
-            _providerService = providerService;
-            _createValidator = createValidator;
-            _updateValidator = updateValidator;
+            _providerService  = providerService;
+            _bookingService   = bookingService;
+            _createValidator  = createValidator;
+            _updateValidator  = updateValidator;
         }
 
         /// <summary>Create a provider profile. PROVIDER role only. One profile per user.</summary>
@@ -116,6 +120,27 @@ namespace Creavers.API.Controllers
         }
 
         // ─── Helpers ────────────────────────────────────────────────────────
+
+        /// <summary>Get the booking history for the authenticated provider. PROVIDER role only.</summary>
+        [HttpGet("history")]
+        [Authorize(Roles = "PROVIDER")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<BookingResponse>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetProviderHistory(CancellationToken cancellationToken)
+        {
+            var providerUserId = GetCurrentUserId();
+            try
+            {
+                var history = await _bookingService.GetProviderHistoryAsync(providerUserId, cancellationToken);
+                return Ok(ApiResponse<IEnumerable<BookingResponse>>.SuccessResult(history));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.FailureResult(ex.Message));
+            }
+        }
+
+        // ─── Private Helpers ────────────────────────────────────────────────
         private Guid GetCurrentUserId()
         {
             var claim = User.FindFirstValue(ClaimTypes.NameIdentifier)

@@ -21,9 +21,12 @@ namespace Creavers.API.Models
         public DateTime           PreferredDate { get; set; }
         public CustomerTaskStatus Status        { get; set; } = CustomerTaskStatus.Pending;
         public string?            ImagePath     { get; set; }
+        public double?            Latitude      { get; set; }
+        public double?            Longitude     { get; set; }
 
         // Navigation
         public ApplicationUser    Customer      { get; set; } = null!;
         public Category           Category      { get; set; } = null!;
+        public ICollection<Booking> Bookings    { get; set; } = new List<Booking>();
     }
 }

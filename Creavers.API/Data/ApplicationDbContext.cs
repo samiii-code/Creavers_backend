@@ -17,6 +17,8 @@ namespace Creavers.API.Data
         public DbSet<ProviderProfile> ProviderProfiles { get; set; } = null!;
         public DbSet<OtpCode>         OtpCodes       { get; set; } = null!;
         public DbSet<CustomerTask>    CustomerTasks  { get; set; } = null!;
+        public DbSet<Booking>         Bookings       { get; set; } = null!;
+        public DbSet<Notification>    Notifications  { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -124,6 +126,61 @@ namespace Creavers.API.Data
                 entity.HasIndex(t => t.CustomerId);
                 entity.HasIndex(t => t.CategoryId);
                 entity.HasQueryFilter(t => !t.IsDeleted);
+            });
+
+            // ── Booking ───────────────────────────────────────────────────────
+            modelBuilder.Entity<Booking>(entity =>
+            {
+                entity.HasKey(b => b.Id);
+
+                entity.Property(b => b.BookingStatus)
+                      .HasConversion<string>()
+                      .HasDefaultValue(BookingStatus.Pending);
+
+                entity.Property(b => b.Notes).HasMaxLength(1000);
+                entity.Property(b => b.CreatedAt).HasDefaultValueSql("NOW()");
+
+                // Task relationship
+                entity.HasOne(b => b.Task)
+                      .WithMany(t => t.Bookings)
+                      .HasForeignKey(b => b.TaskId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Provider relationship
+                entity.HasOne(b => b.Provider)
+                      .WithMany(p => p.Bookings)
+                      .HasForeignKey(b => b.ProviderId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Customer relationship
+                entity.HasOne(b => b.Customer)
+                      .WithMany(u => u.CustomerBookings)
+                      .HasForeignKey(b => b.CustomerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(b => b.TaskId);
+                entity.HasIndex(b => b.ProviderId);
+                entity.HasIndex(b => b.CustomerId);
+                entity.HasQueryFilter(b => !b.IsDeleted);
+            });
+
+            // ── Notification ──────────────────────────────────────────────────
+            modelBuilder.Entity<Notification>(entity =>
+            {
+                entity.HasKey(n => n.Id);
+
+                entity.Property(n => n.Title).IsRequired().HasMaxLength(200);
+                entity.Property(n => n.Message).IsRequired().HasMaxLength(2000);
+                entity.Property(n => n.IsRead).HasDefaultValue(false);
+                entity.Property(n => n.CreatedAt).HasDefaultValueSql("NOW()");
+
+                entity.HasOne(n => n.User)
+                      .WithMany(u => u.Notifications)
+                      .HasForeignKey(n => n.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(n => n.UserId);
+                entity.HasQueryFilter(n => !n.IsDeleted);
             });
         }
     }

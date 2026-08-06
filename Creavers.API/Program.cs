@@ -164,6 +164,8 @@ try
     builder.Services.AddScoped<IAdminService,    AdminService>();
     builder.Services.AddScoped<IOtpService,     OtpService>();
     builder.Services.AddScoped<ITaskService,    TaskService>();
+    builder.Services.AddScoped<INotificationService, NotificationService>();
+    builder.Services.AddScoped<IBookingService,      BookingService>();
 
     // ─── Build ────────────────────────────────────────────────────────────────
     var app = builder.Build();

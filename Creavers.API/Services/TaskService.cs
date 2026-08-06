@@ -147,6 +147,79 @@ namespace Creavers.API.Services
             return _mapper.Map<IEnumerable<TaskResponse>>(tasks);
         }
 
+        // ── RECOMMENDED PROVIDERS (Matching) ──────────────────────────────────
+        public async Task<IEnumerable<RecommendedProviderDto>> GetRecommendedProvidersAsync(
+            Guid taskId,
+            CancellationToken cancellationToken = default)
+        {
+            var task = await _context.CustomerTasks
+                .FirstOrDefaultAsync(t => t.Id == taskId && !t.IsDeleted, cancellationToken)
+                ?? throw new KeyNotFoundException($"Task '{taskId}' not found.");
+
+            // Matching criteria:
+            // 1. Same Category
+            // 2. Provider Status = Approved
+            var providers = await _context.ProviderProfiles
+                .Include(p => p.ApplicationUser)
+                .Include(p => p.Category)
+                .Where(p => p.CategoryId == task.CategoryId && p.Status == ProviderStatus.Approved && !p.IsDeleted)
+                .ToListAsync(cancellationToken);
+
+            var recommendations = providers.Select(p =>
+            {
+                var isSubCityMatch = !string.IsNullOrWhiteSpace(p.ServiceArea) &&
+                                     !string.IsNullOrWhiteSpace(task.SubCity) &&
+                                     (p.ServiceArea.Contains(task.SubCity, StringComparison.OrdinalIgnoreCase) ||
+                                      task.SubCity.Contains(p.ServiceArea, StringComparison.OrdinalIgnoreCase));
+
+                var distance = CalculateDistance(p.Latitude, p.Longitude, task.Latitude, task.Longitude);
+                var providerDto = _mapper.Map<Creavers.API.DTOs.Providers.ProviderProfileDto>(p);
+
+                return new
+                {
+                    Dto = new RecommendedProviderDto
+                    {
+                        Provider = providerDto,
+                        Distance = distance,
+                        Experience = p.ExperienceYears,
+                        Rating = 5.0 // Rating placeholder
+                    },
+                    IsSubCityMatch = isSubCityMatch,
+                    Distance = distance,
+                    Experience = p.ExperienceYears
+                };
+            });
+
+            var sorted = recommendations
+                .OrderByDescending(r => r.IsSubCityMatch)
+                .ThenBy(r => r.Distance.HasValue ? 0 : 1)
+                .ThenBy(r => r.Distance)
+                .ThenByDescending(r => r.Experience)
+                .Select(r => r.Dto)
+                .ToList();
+
+            return sorted;
+        }
+
+        private static double? CalculateDistance(double? lat1, double? lon1, double? lat2, double? lon2)
+        {
+            if (!lat1.HasValue || !lon1.HasValue || !lat2.HasValue || !lon2.HasValue)
+                return null;
+
+            var R = 6371.0;
+            var dLat = ToRadians(lat2.Value - lat1.Value);
+            var dLon = ToRadians(lon2.Value - lon1.Value);
+
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(ToRadians(lat1.Value)) * Math.Cos(ToRadians(lat2.Value)) *
+                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return Math.Round(R * c, 2);
+        }
+
+        private static double ToRadians(double val) => Math.PI * val / 180.0;
+
         // ── HELPER ────────────────────────────────────────────────────────────
         private async Task<TaskResponse?> BuildResponseAsync(Guid id, CancellationToken cancellationToken)
         {

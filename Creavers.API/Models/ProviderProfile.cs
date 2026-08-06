@@ -14,9 +14,12 @@ namespace Creavers.API.Models
         public string? ProfilePhoto { get; set; }
         public string? LicenseDocument { get; set; }
         public ProviderStatus Status { get; set; } = ProviderStatus.Pending;
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
 
         // Navigation
         public ApplicationUser ApplicationUser { get; set; } = null!;
         public Category Category { get; set; } = null!;
+        public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     }
 }

@@ -10,5 +10,6 @@ namespace Creavers.API.Interfaces
         Task<TaskResponse>              UpdateAsync(Guid id, UpdateTaskRequest request, Guid requesterId, bool isAdmin, CancellationToken cancellationToken = default);
         Task                            DeleteAsync(Guid id, Guid requesterId, bool isAdmin, CancellationToken cancellationToken = default);
         Task<IEnumerable<TaskResponse>> GetMyTasksAsync(Guid customerId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<RecommendedProviderDto>> GetRecommendedProvidersAsync(Guid taskId, CancellationToken cancellationToken = default);
     }
 }

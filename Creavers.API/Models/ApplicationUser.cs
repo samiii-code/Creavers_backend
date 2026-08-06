@@ -10,8 +10,10 @@ namespace Creavers.API.Models
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation
-        public ProviderProfile?           ProviderProfile { get; set; }
-        public ICollection<OtpCode>       OtpCodes        { get; set; } = new List<OtpCode>();
-        public ICollection<CustomerTask>  CustomerTasks   { get; set; } = new List<CustomerTask>();
+        public ProviderProfile?           ProviderProfile  { get; set; }
+        public ICollection<OtpCode>       OtpCodes         { get; set; } = new List<OtpCode>();
+        public ICollection<CustomerTask>  CustomerTasks    { get; set; } = new List<CustomerTask>();
+        public ICollection<Booking>       CustomerBookings { get; set; } = new List<Booking>();
+        public ICollection<Notification>  Notifications    { get; set; } = new List<Notification>();
     }
 }

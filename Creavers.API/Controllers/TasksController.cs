@@ -180,6 +180,24 @@ namespace Creavers.API.Controllers
             }
         }
 
+        /// <summary>Get recommended service providers for a specific task based on category, location/subcity, and experience.</summary>
+        [HttpGet("{taskId:guid}/recommended-providers")]
+        [Authorize(Roles = "CUSTOMER,ADMIN")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<RecommendedProviderDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetRecommendedProviders(Guid taskId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var recommendations = await _taskService.GetRecommendedProvidersAsync(taskId, cancellationToken);
+                return Ok(ApiResponse<IEnumerable<RecommendedProviderDto>>.SuccessResult(recommendations));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.FailureResult(ex.Message));
+            }
+        }
+
         // ─── Helpers ────────────────────────────────────────────────────────
         private Guid GetCurrentUserId()
         {
