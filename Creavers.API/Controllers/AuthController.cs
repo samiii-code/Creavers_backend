@@ -6,26 +6,41 @@ using Creavers.API.Interfaces;
 
 namespace Creavers.API.Controllers
 {
-    /// <summary>Authentication endpoints for registration and login.</summary>
+    /// <summary>Authentication endpoints for registration, login, and OTP verification.</summary>
     [ApiController]
     [Route("api/auth")]
     [Produces("application/json")]
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly IOtpService _otpService;
+        private readonly IWebHostEnvironment _environment;
         private readonly IValidator<RegisterRequest> _registerValidator;
         private readonly IValidator<LoginRequest> _loginValidator;
+        private readonly IValidator<SendOtpRequest> _sendOtpValidator;
+        private readonly IValidator<VerifyOtpRequest> _verifyOtpValidator;
+        private readonly IValidator<ResendOtpRequest> _resendOtpValidator;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             IAuthService authService,
+            IOtpService otpService,
+            IWebHostEnvironment environment,
             IValidator<RegisterRequest> registerValidator,
             IValidator<LoginRequest> loginValidator,
+            IValidator<SendOtpRequest> sendOtpValidator,
+            IValidator<VerifyOtpRequest> verifyOtpValidator,
+            IValidator<ResendOtpRequest> resendOtpValidator,
             ILogger<AuthController> logger)
         {
             _authService = authService;
+            _otpService = otpService;
+            _environment = environment;
             _registerValidator = registerValidator;
             _loginValidator = loginValidator;
+            _sendOtpValidator = sendOtpValidator;
+            _verifyOtpValidator = verifyOtpValidator;
+            _resendOtpValidator = resendOtpValidator;
             _logger = logger;
         }
 
@@ -77,6 +92,85 @@ namespace Creavers.API.Controllers
             catch (UnauthorizedAccessException ex)
             {
                 return Unauthorized(ApiResponse<object>.FailureResult(ex.Message));
+            }
+        }
+
+        /// <summary>Send an OTP code to a user for phone verification, email verification, or password reset.</summary>
+        [HttpPost("send-otp")]
+        [ProducesResponseType(typeof(ApiResponse<OtpResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> SendOtp([FromBody] SendOtpRequest request, CancellationToken cancellationToken)
+        {
+            var validation = await _sendOtpValidator.ValidateAsync(request, cancellationToken);
+            if (!validation.IsValid)
+            {
+                var errors = validation.Errors.Select(e => e.ErrorMessage).ToList();
+                return BadRequest(ApiResponse<object>.FailureResult("Validation failed.", errors));
+            }
+
+            try
+            {
+                var result = await _otpService.SendOtpAsync(request, _environment.IsDevelopment(), cancellationToken);
+                return Ok(ApiResponse<OtpResponse>.SuccessResult(result, result.Message));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.FailureResult(ex.Message));
+            }
+        }
+
+        /// <summary>Verify an OTP code submitted by a user.</summary>
+        [HttpPost("verify-otp")]
+        [ProducesResponseType(typeof(ApiResponse<OtpResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request, CancellationToken cancellationToken)
+        {
+            var validation = await _verifyOtpValidator.ValidateAsync(request, cancellationToken);
+            if (!validation.IsValid)
+            {
+                var errors = validation.Errors.Select(e => e.ErrorMessage).ToList();
+                return BadRequest(ApiResponse<object>.FailureResult("Validation failed.", errors));
+            }
+
+            try
+            {
+                var result = await _otpService.VerifyOtpAsync(request, cancellationToken);
+                return Ok(ApiResponse<OtpResponse>.SuccessResult(result, result.Message));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.FailureResult(ex.Message));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ApiResponse<object>.FailureResult(ex.Message));
+            }
+        }
+
+        /// <summary>Resend an OTP code to a user.</summary>
+        [HttpPost("resend-otp")]
+        [ProducesResponseType(typeof(ApiResponse<OtpResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request, CancellationToken cancellationToken)
+        {
+            var validation = await _resendOtpValidator.ValidateAsync(request, cancellationToken);
+            if (!validation.IsValid)
+            {
+                var errors = validation.Errors.Select(e => e.ErrorMessage).ToList();
+                return BadRequest(ApiResponse<object>.FailureResult("Validation failed.", errors));
+            }
+
+            try
+            {
+                var result = await _otpService.ResendOtpAsync(request, _environment.IsDevelopment(), cancellationToken);
+                return Ok(ApiResponse<OtpResponse>.SuccessResult(result, result.Message));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.FailureResult(ex.Message));
             }
         }
     }

@@ -7,5 +7,6 @@ namespace Creavers.API.Models
 
         // Navigation
         public ICollection<ProviderProfile> ProviderProfiles { get; set; } = new List<ProviderProfile>();
+        public ICollection<CustomerTask>    CustomerTasks    { get; set; } = new List<CustomerTask>();
     }
 }

@@ -13,8 +13,10 @@ namespace Creavers.API.Data
         {
         }
 
-        public DbSet<Category> Categories { get; set; } = null!;
+        public DbSet<Category>        Categories     { get; set; } = null!;
         public DbSet<ProviderProfile> ProviderProfiles { get; set; } = null!;
+        public DbSet<OtpCode>         OtpCodes       { get; set; } = null!;
+        public DbSet<CustomerTask>    CustomerTasks  { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -65,6 +67,63 @@ namespace Creavers.API.Data
 
                 entity.HasIndex(p => p.ApplicationUserId).IsUnique();
                 entity.HasQueryFilter(p => !p.IsDeleted);
+            });
+
+            // ── OtpCode ───────────────────────────────────────────────────────
+            modelBuilder.Entity<OtpCode>(entity =>
+            {
+                entity.HasKey(o => o.Id);
+                entity.Property(o => o.Code).IsRequired().HasMaxLength(6);
+                entity.Property(o => o.Purpose).HasConversion<string>();
+                entity.Property(o => o.ExpiresAt).IsRequired();
+                entity.Property(o => o.IsUsed).HasDefaultValue(false);
+                entity.Property(o => o.CreatedAt).HasDefaultValueSql("NOW()");
+
+                // One User → Many OtpCodes
+                entity.HasOne(o => o.User)
+                      .WithMany(u => u.OtpCodes)
+                      .HasForeignKey(o => o.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(o => new { o.UserId, o.Purpose });
+                entity.HasQueryFilter(o => !o.IsDeleted);
+            });
+
+            // ── CustomerTask ──────────────────────────────────────────────────
+            modelBuilder.Entity<CustomerTask>(entity =>
+            {
+                entity.HasKey(t => t.Id);
+
+                entity.Property(t => t.Title).IsRequired().HasMaxLength(200);
+                entity.Property(t => t.Description).IsRequired().HasMaxLength(2000);
+                entity.Property(t => t.Address).IsRequired().HasMaxLength(500);
+                entity.Property(t => t.SubCity).IsRequired().HasMaxLength(100);
+                entity.Property(t => t.Woreda).IsRequired().HasMaxLength(100);
+                entity.Property(t => t.Landmark).HasMaxLength(300);
+                entity.Property(t => t.Budget).HasColumnType("decimal(18,2)");
+                entity.Property(t => t.ImagePath).HasMaxLength(500);
+
+                entity.Property(t => t.Status)
+                      .HasConversion<string>()
+                      .HasDefaultValue(CustomerTaskStatus.Pending);
+
+                entity.Property(t => t.CreatedAt).HasDefaultValueSql("NOW()");
+
+                // One Customer (User) → Many Tasks
+                entity.HasOne(t => t.Customer)
+                      .WithMany(u => u.CustomerTasks)
+                      .HasForeignKey(t => t.CustomerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // One Category → Many Tasks
+                entity.HasOne(t => t.Category)
+                      .WithMany(c => c.CustomerTasks)
+                      .HasForeignKey(t => t.CategoryId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(t => t.CustomerId);
+                entity.HasIndex(t => t.CategoryId);
+                entity.HasQueryFilter(t => !t.IsDeleted);
             });
         }
     }

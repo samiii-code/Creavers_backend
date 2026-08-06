@@ -99,7 +99,7 @@ try
         {
             Title       = "Creavers Local Services Marketplace API",
             Version     = "v1",
-            Description = "ASP.NET Core 8 Web API – Week 2: Auth, Categories, Provider Profiles, Admin Approval"
+            Description = "ASP.NET Core 8 Web API – Week 2 (OTP) & Week 3 (Customer Task Module)"
         });
 
         c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -162,6 +162,8 @@ try
     builder.Services.AddScoped<ICategoryService, CategoryService>();
     builder.Services.AddScoped<IProviderService, ProviderService>();
     builder.Services.AddScoped<IAdminService,    AdminService>();
+    builder.Services.AddScoped<IOtpService,     OtpService>();
+    builder.Services.AddScoped<ITaskService,    TaskService>();
 
     // ─── Build ────────────────────────────────────────────────────────────────
     var app = builder.Build();
