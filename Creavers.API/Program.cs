@@ -166,6 +166,9 @@ try
     builder.Services.AddScoped<ITaskService,    TaskService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
     builder.Services.AddScoped<IBookingService,      BookingService>();
+    builder.Services.AddScoped<IAuditLogService,     AuditLogService>();
+    builder.Services.AddScoped<IJobService,          JobService>();
+    builder.Services.AddScoped<IChatService,         ChatService>();
 
     // ─── Build ────────────────────────────────────────────────────────────────
     var app = builder.Build();

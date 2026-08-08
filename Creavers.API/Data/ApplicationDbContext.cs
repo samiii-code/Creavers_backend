@@ -13,12 +13,16 @@ namespace Creavers.API.Data
         {
         }
 
-        public DbSet<Category>        Categories     { get; set; } = null!;
-        public DbSet<ProviderProfile> ProviderProfiles { get; set; } = null!;
-        public DbSet<OtpCode>         OtpCodes       { get; set; } = null!;
-        public DbSet<CustomerTask>    CustomerTasks  { get; set; } = null!;
-        public DbSet<Booking>         Bookings       { get; set; } = null!;
-        public DbSet<Notification>    Notifications  { get; set; } = null!;
+        public DbSet<Category>           Categories          { get; set; } = null!;
+        public DbSet<ProviderProfile>    ProviderProfiles    { get; set; } = null!;
+        public DbSet<OtpCode>            OtpCodes            { get; set; } = null!;
+        public DbSet<CustomerTask>       CustomerTasks       { get; set; } = null!;
+        public DbSet<Booking>            Bookings            { get; set; } = null!;
+        public DbSet<Notification>       Notifications       { get; set; } = null!;
+        public DbSet<CompletionEvidence> CompletionEvidences { get; set; } = null!;
+        public DbSet<JobTimeline>        JobTimelines        { get; set; } = null!;
+        public DbSet<ChatMessage>        ChatMessages        { get; set; } = null!;
+        public DbSet<AuditLog>           AuditLogs           { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -137,6 +141,10 @@ namespace Creavers.API.Data
                       .HasConversion<string>()
                       .HasDefaultValue(BookingStatus.Pending);
 
+                entity.Property(b => b.JobStatus)
+                      .HasConversion<string>()
+                      .HasDefaultValue(JobStatus.Accepted);
+
                 entity.Property(b => b.Notes).HasMaxLength(1000);
                 entity.Property(b => b.CreatedAt).HasDefaultValueSql("NOW()");
 
@@ -162,6 +170,87 @@ namespace Creavers.API.Data
                 entity.HasIndex(b => b.ProviderId);
                 entity.HasIndex(b => b.CustomerId);
                 entity.HasQueryFilter(b => !b.IsDeleted);
+            });
+
+            // ── CompletionEvidence ────────────────────────────────────────────
+            modelBuilder.Entity<CompletionEvidence>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.PhotoPath).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+
+                entity.HasOne(e => e.Booking)
+                      .WithMany(b => b.CompletionEvidences)
+                      .HasForeignKey(e => e.BookingId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.BookingId);
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            // ── JobTimeline ───────────────────────────────────────────────────
+            modelBuilder.Entity<JobTimeline>(entity =>
+            {
+                entity.HasKey(t => t.Id);
+                entity.Property(t => t.Status).HasConversion<string>().IsRequired();
+                entity.Property(t => t.Notes).HasMaxLength(500);
+                entity.Property(t => t.CreatedAt).HasDefaultValueSql("NOW()");
+
+                entity.HasOne(t => t.Booking)
+                      .WithMany(b => b.Timelines)
+                      .HasForeignKey(t => t.BookingId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(t => t.ChangedByUser)
+                      .WithMany()
+                      .HasForeignKey(t => t.ChangedBy)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(t => t.BookingId);
+                entity.HasQueryFilter(t => !t.IsDeleted);
+            });
+
+            // ── ChatMessage ───────────────────────────────────────────────────
+            modelBuilder.Entity<ChatMessage>(entity =>
+            {
+                entity.HasKey(m => m.Id);
+                entity.Property(m => m.Message).IsRequired().HasMaxLength(2000);
+                entity.Property(m => m.SentAt).HasDefaultValueSql("NOW()");
+                entity.Property(m => m.IsRead).HasDefaultValue(false);
+                entity.Property(m => m.CreatedAt).HasDefaultValueSql("NOW()");
+
+                entity.HasOne(m => m.Booking)
+                      .WithMany(b => b.ChatMessages)
+                      .HasForeignKey(m => m.BookingId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(m => m.Sender)
+                      .WithMany()
+                      .HasForeignKey(m => m.SenderId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(m => m.BookingId);
+                entity.HasQueryFilter(m => !m.IsDeleted);
+            });
+
+            // ── AuditLog ──────────────────────────────────────────────────────
+            modelBuilder.Entity<AuditLog>(entity =>
+            {
+                entity.HasKey(a => a.Id);
+                entity.Property(a => a.Action).IsRequired().HasMaxLength(100);
+                entity.Property(a => a.EntityName).IsRequired().HasMaxLength(100);
+                entity.Property(a => a.EntityId).IsRequired().HasMaxLength(100);
+                entity.Property(a => a.Details).HasMaxLength(4000);
+                entity.Property(a => a.CreatedAt).HasDefaultValueSql("NOW()");
+
+                entity.HasOne(a => a.User)
+                      .WithMany()
+                      .HasForeignKey(a => a.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(a => new { a.EntityName, a.EntityId });
+                entity.HasIndex(a => a.UserId);
             });
 
             // ── Notification ──────────────────────────────────────────────────

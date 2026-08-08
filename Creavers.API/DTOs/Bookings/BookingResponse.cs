@@ -12,7 +12,9 @@ namespace Creavers.API.DTOs.Bookings
         public Guid CustomerId { get; set; }
         public string CustomerName { get; set; } = string.Empty;
         public BookingStatus BookingStatus { get; set; }
-        public string StatusName => BookingStatus.ToString();
+        public string BookingStatusName => BookingStatus.ToString();
+        public JobStatus JobStatus { get; set; }
+        public string JobStatusName => JobStatus.ToString();
         public string? Notes { get; set; }
         public DateTime? ScheduledDate { get; set; }
         public DateTime CreatedAt { get; set; }
